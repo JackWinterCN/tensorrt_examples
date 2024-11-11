@@ -669,7 +669,7 @@ struct SampleINT8APIArgs : public samplesCommon::Args
 {
     bool verbose{false};
     bool writeNetworkTensors{false};
-    std::string modelFileName{"resnet50.onnx"};
+    std::string modelFileName{"ResNet50.onnx"};
     std::string imageFileName{"airliner.ppm"};
     std::string referenceFileName{"reference_labels.txt"};
     std::string dynamicRangeFileName{"resnet50_per_tensor_dynamic_range.txt"};
@@ -772,7 +772,7 @@ SampleINT8APIParams initializeSampleParams(SampleINT8APIArgs args)
     SampleINT8APIParams params;
     if (args.dataDirs.empty()) // Use default directories if user hasn't provided directory paths
     {
-        params.dataDirs.push_back("data/samples/int8_api/");
+        params.dataDirs.push_back("data/resnet50/");
         params.dataDirs.push_back("data/int8_api/");
     }
     else // Use the data directory provided by the user

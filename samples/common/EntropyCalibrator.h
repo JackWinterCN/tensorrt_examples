@@ -36,10 +36,18 @@ public:
         , mInputBlobName(inputBlobName)
         , mReadCache(readCache)
     {
-        nvinfer1::Dims dims = mStream.getDims();
-        mInputCount = samplesCommon::volume(dims);
-        CHECK(cudaMalloc(&mDeviceInput, mInputCount * sizeof(float)));
-        mStream.reset(firstBatch);
+      std::cout << "--------------- [info] EntropyCalibratorImpl: firstBatch = "
+                << firstBatch << ", networkName = " << networkName
+                << ", inputBlobName = " << inputBlobName << std::endl;
+      nvinfer1::Dims dims = mStream.getDims();
+      std::cout << "--------------- [info] EntropyCalibratorImpl: dims.nbDims = "
+          << dims.nbDims << ", dims.d[3] = " << dims.d[3]
+          << ", dims.d[2] = " << dims.d[2] << ", dims.d[1] = " << dims.d[1]
+          << ", dims.d[0] = " << dims.d[0] << std::endl;
+      mInputCount = samplesCommon::volume(dims);
+      CHECK(cudaMalloc(&mDeviceInput, mInputCount * sizeof(float)));
+      mStream.reset(firstBatch);
+        
     }
 
     virtual ~EntropyCalibratorImpl()
@@ -49,11 +57,13 @@ public:
 
     int getBatchSize() const noexcept
     {
+        std::cout << "--------------- [info] EntropyCalibratorImpl<...>::getBatchSize()" << std::endl;
         return mStream.getBatchSize();
     }
 
     bool getBatch(void* bindings[], const char* names[], int nbBindings) noexcept
     {
+        std::cout << "--------------- [info] EntropyCalibratorImpl<...>::getBatch()" << std::endl;
         if (!mStream.next())
         {
             return false;
@@ -66,6 +76,7 @@ public:
 
     const void* readCalibrationCache(size_t& length) noexcept
     {
+        std::cout << "--------------- [info] EntropyCalibratorImpl<...>::getBatch()" << std::endl;
         mCalibrationCache.clear();
         std::ifstream input(mCalibrationTableName, std::ios::binary);
         input >> std::noskipws;
@@ -80,6 +91,7 @@ public:
 
     void writeCalibrationCache(const void* cache, size_t length) noexcept
     {
+        std::cout << "--------------- [info] EntropyCalibratorImpl<...>::getBatch()" << std::endl;
         std::ofstream output(mCalibrationTableName, std::ios::binary);
         output.write(reinterpret_cast<const char*>(cache), length);
     }
@@ -107,25 +119,30 @@ public:
         TBatchStream stream, int firstBatch, const char* networkName, const char* inputBlobName, bool readCache = true)
         : mImpl(stream, firstBatch, networkName, inputBlobName, readCache)
     {
+        std::cout << "------------------- [info] Int8EntropyCalibrator2::Int8EntropyCalibrator2()" << std::endl;
     }
 
     int getBatchSize() const noexcept override
     {
+        std::cout << "------------------- [info] Int8EntropyCalibrator2::getBatchSize()" << std::endl;
         return mImpl.getBatchSize();
     }
 
     bool getBatch(void* bindings[], const char* names[], int nbBindings) noexcept override
     {
+        std::cout << "------------------- [info] Int8EntropyCalibrator2::getBatch()" << std::endl;
         return mImpl.getBatch(bindings, names, nbBindings);
     }
 
     const void* readCalibrationCache(size_t& length) noexcept override
     {
+        std::cout << "------------------- [info] Int8EntropyCalibrator2::readCalibrationCache()" << std::endl;
         return mImpl.readCalibrationCache(length);
     }
 
     void writeCalibrationCache(const void* cache, size_t length) noexcept override
     {
+        std::cout << "------------------- [info] Int8EntropyCalibrator2::writeCalibrationCache()" << std::endl;
         mImpl.writeCalibrationCache(cache, length);
     }
 

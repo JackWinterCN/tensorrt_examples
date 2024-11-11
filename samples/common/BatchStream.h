@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <vector>
 
+#define BATCH_STREAM_DEBUG
 class IBatchStream
 {
 public:
@@ -45,17 +46,28 @@ public:
         , mMaxBatches{maxBatches}
         , mDims{3, {1, 28, 28}} //!< We already know the dimensions of MNIST images.
     {
+#ifdef BATCH_STREAM_DEBUG
+      std::cout << "----------- [info] MNISTBatchStream::mBatchSize = "
+                << mBatchSize << ", mMaxBatches = " << mMaxBatches << std::endl;
+#endif        
         readDataFile(locateFile(dataFile, directories));
         readLabelsFile(locateFile(labelsFile, directories));
     }
 
     void reset(int firstBatch) override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::reset()" << std::endl;
+#endif
         mBatchCount = firstBatch;
     }
 
     bool next() override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::next()" << std::endl;
+#endif
+       
         if (mBatchCount >= mMaxBatches)
         {
             return false;
@@ -66,37 +78,58 @@ public:
 
     void skip(int skipCount) override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::skip()" << std::endl;
+#endif
         mBatchCount += skipCount;
     }
 
     float* getBatch() override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::getBatch()" << std::endl;
+#endif
         return mData.data() + (mBatchCount * mBatchSize * samplesCommon::volume(mDims));
     }
 
     float* getLabels() override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::getLabels()" << std::endl;
+#endif
         return mLabels.data() + (mBatchCount * mBatchSize);
     }
 
     int getBatchesRead() const override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::getBatchesRead()" << std::endl;
+#endif
         return mBatchCount;
     }
 
     int getBatchSize() const override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::getBatchSize():  " <<  mBatchSize << std::endl;
+#endif
         return mBatchSize;
     }
 
     nvinfer1::Dims getDims() const override
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::getDims()" << std::endl;
+#endif
         return nvinfer1::Dims{4, {mBatchSize, mDims.d[0], mDims.d[1], mDims.d[2]}};
     }
 
 private:
     void readDataFile(const std::string& dataFilePath)
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::readDataFile()" << std::endl;
+#endif
         std::ifstream file{dataFilePath.c_str(), std::ios::binary};
 
         int magicNumber, numImages, imageH, imageW;
@@ -113,7 +146,9 @@ private:
         numImages = samplesCommon::swapEndianness(numImages);
         imageH = samplesCommon::swapEndianness(imageH);
         imageW = samplesCommon::swapEndianness(imageW);
-
+        std::cout << "------- [info] numImages = " << numImages
+                  << ", imageH = " << imageH << ", imageW = " << imageW
+                  << std::endl;
         // The MNIST data is made up of unsigned bytes, so we need to cast to float and normalize.
         int numElements = numImages * imageH * imageW;
         std::vector<uint8_t> rawData(numElements);
@@ -125,6 +160,10 @@ private:
 
     void readLabelsFile(const std::string& labelsFilePath)
     {
+#ifdef BATCH_STREAM_DEBUG
+    std::cout << "----------- [info] MNISTBatchStream::readLabelsFile()" << std::endl;
+#endif
+       
         std::ifstream file{labelsFilePath.c_str(), std::ios::binary};
         int magicNumber, numImages;
         file.read(reinterpret_cast<char*>(&magicNumber), sizeof(magicNumber));
@@ -134,7 +173,7 @@ private:
 
         file.read(reinterpret_cast<char*>(&numImages), sizeof(numImages));
         numImages = samplesCommon::swapEndianness(numImages);
-
+        std::cout << "------- [info] numImages = " << numImages << std::endl;
         std::vector<uint8_t> rawLabels(numImages);
         file.read(reinterpret_cast<char*>(rawLabels.data()), numImages * sizeof(uint8_t));
         mLabels.resize(numImages);
