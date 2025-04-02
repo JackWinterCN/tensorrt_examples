@@ -70,6 +70,27 @@ struct SampleINT8APIParams
     std::string networkTensorsFileName;
 };
 
+
+bool saveEngine(const ICudaEngine& engine, std::string const& fileName, std::ostream& err)
+{
+    std::ofstream engineFile(fileName, std::ios::binary);
+    if (!engineFile)
+    {
+        err << "Cannot open engine file: " << fileName << std::endl;
+        return false;
+    }
+
+    std::unique_ptr<IHostMemory> serializedEngine{engine.serialize()};
+    if (serializedEngine == nullptr)
+    {
+        err << "Engine serialization failed" << std::endl;
+        return false;
+    }
+
+    engineFile.write(static_cast<char*>(serializedEngine->data()), serializedEngine->size());
+    return !engineFile.fail();
+}
+
 //!
 //! \brief The SampleINT8API class implements INT8 inference on classification networks.
 //!
@@ -265,25 +286,32 @@ void SampleINT8API::writeNetworkTensorNames(const SampleUniquePtr<nvinfer1::INet
     for (int i = 0; i < network->getNbInputs(); ++i)
     {
         std::string tName = network->getInput(i)->getName();
-        tensorsFile << "TensorName: " << tName << std::endl;
+        tensorsFile << "Input TensorName: " << tName << std::endl;
         if (mParams.verbose)
         {
-            sample::gLogInfo << "TensorName: " << tName << std::endl;
+            sample::gLogInfo << "Input TensorName: " << tName << std::endl;
         }
     }
 
     // Iterate through network layers.
     for (int i = 0; i < network->getNbLayers(); ++i)
     {
+        tensorsFile << "LayerName: " << network->getLayer(i)->getName() << std::endl;
         // Write output tensors of a layer to the file.
-        for (int j = 0; j < network->getLayer(i)->getNbOutputs(); ++j)
-        {
-            std::string tName = network->getLayer(i)->getOutput(j)->getName();
-            tensorsFile << "TensorName: " << tName << std::endl;
-            if (mParams.verbose)
-            {
-                sample::gLogInfo << "TensorName: " << tName << std::endl;
-            }
+        for (int j = 0; j < network->getLayer(i)->getNbInputs(); ++j) {
+          std::string tName = network->getLayer(i)->getInput(j)->getName();
+          tensorsFile << "Input TensorName: " << tName << std::endl;
+          if (mParams.verbose) {
+            sample::gLogInfo << "Input TensorName: " << tName << std::endl;
+          }
+        }
+        // Write output tensors of a layer to the file.
+        for (int j = 0; j < network->getLayer(i)->getNbOutputs(); ++j) {
+          std::string tName = network->getLayer(i)->getOutput(j)->getName();
+          tensorsFile << "Output TensorName: " << tName << std::endl;
+          if (mParams.verbose) {
+            sample::gLogInfo << "Output TensorName: " << tName << std::endl;
+          }
         }
     }
     tensorsFile.close();
@@ -537,7 +565,7 @@ sample::Logger::TestResult SampleINT8API::build()
     if (mParams.writeNetworkTensors)
     {
         writeNetworkTensorNames(network);
-        return sample::Logger::TestResult::kWAIVED;
+        // return sample::Logger::TestResult::kWAIVED;
     }
 
     // Configure buider
@@ -588,7 +616,7 @@ sample::Logger::TestResult SampleINT8API::build()
         sample::gLogError << "Unable to build cuda engine." << std::endl;
         return sample::Logger::TestResult::kFAILED;
     }
-
+    saveEngine(*mEngine, "resnet50.trt", std::cout);
     // populates input output map structure
     getInputOutputNames();
 
@@ -668,8 +696,8 @@ sample::Logger::TestResult SampleINT8API::teardown()
 struct SampleINT8APIArgs : public samplesCommon::Args
 {
     bool verbose{false};
-    bool writeNetworkTensors{false};
-    std::string modelFileName{"ResNet50.onnx"};
+    bool writeNetworkTensors{true};
+    std::string modelFileName{"resnet50.onnx"};
     std::string imageFileName{"airliner.ppm"};
     std::string referenceFileName{"reference_labels.txt"};
     std::string dynamicRangeFileName{"resnet50_per_tensor_dynamic_range.txt"};
@@ -772,7 +800,7 @@ SampleINT8APIParams initializeSampleParams(SampleINT8APIArgs args)
     SampleINT8APIParams params;
     if (args.dataDirs.empty()) // Use default directories if user hasn't provided directory paths
     {
-        params.dataDirs.push_back("data/resnet50/");
+        params.dataDirs.push_back("data/samples/int8_api/");
         params.dataDirs.push_back("data/int8_api/");
     }
     else // Use the data directory provided by the user
