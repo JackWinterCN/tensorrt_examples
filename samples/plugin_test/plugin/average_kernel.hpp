@@ -1,0 +1,1 @@
+void average_op(const float *a, const float *b, float *c, int n);
